@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  nexusops:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nexusops:latest
+    container_name: nexusops-app
+    ports:
+      - "8080:8080"
+    environment:
+      - PORT=8080
+      - HOST=0.0.0.0
+      - MOCK_MODE=true
+      - GEMINI_MODEL=gemini-2.5-flash
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-}
+      - CHAOS_MODE=false
+      - DATABASE_URL=sqlite:////data/nexusops.db
+    volumes:
+      - nexusops_data:/data
+    restart: unless-stopped
+
+volumes:
+  nexusops_data:
+    driver: local
