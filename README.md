@@ -3,6 +3,7 @@
 [![Python 3.11+](https://img.shields.io/badge/Python-3.11+-3776AB?style=flat&logo=python&logoColor=white)](https://www.python.org/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.109+-009688?style=flat&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![React + Vite](https://img.shields.io/badge/React%2018-Vite-61DAFB?style=flat&logo=react&logoColor=black)](https://vitejs.dev/)
+[![Streamlit](https://img.shields.io/badge/Streamlit-1.31+-FF4B4B?style=flat&logo=streamlit&logoColor=white)](https://streamlit.io/)
 [![Docker](https://img.shields.io/badge/Docker-Cloud%20Run%20Ready-2496ED?style=flat&logo=docker&logoColor=white)](https://cloud.google.com/run)
 [![Tests](https://img.shields.io/badge/Pytest-30%2F30%20Passed-4CAF50?style=flat&logo=pytest&logoColor=white)](https://pytest.org/)
 
@@ -142,7 +143,23 @@ Open [http://localhost:5173](http://localhost:5173) in your browser. (The Vite s
 
 ---
 
-### Option B: Docker Compose
+### Option B: Streamlit Community Cloud (1-Click Deployment)
+
+Deploy directly to **Streamlit Community Cloud** with zero configuration:
+1. Go to [share.streamlit.io](https://share.streamlit.io) and click **"New app"**.
+2. Select repository: `Ansh00031/NexusOps`
+3. Branch: `main`
+4. **Main file path:** `streamlit_app.py`
+5. Click **Deploy!**
+
+To run the Streamlit interface locally:
+```bash
+streamlit run streamlit_app.py
+```
+
+---
+
+### Option C: Docker Compose
 
 Build and run the entire unified stack (frontend built into static FastAPI bundle):
 
