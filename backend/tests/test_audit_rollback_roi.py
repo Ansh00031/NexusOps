@@ -40,11 +40,22 @@ def test_immutable_audit_log_checksum(sim_db):
     assert entry.id.startswith("aud-")
     assert len(entry.checksum) == 64  # SHA256 length
 
-    # Re-calculate hash and verify integrity
-    details_str = json.dumps({"amount": 250.0, "target": "CUST-10482"}, sort_keys=True, default=str)
-    expected_payload = f"{entry.id}|inc-test-123|act-test-456|HumanManager|APPROVED_AND_EXECUTED|{details_str}|{entry.timestamp.isoformat()}"
-    computed_hash = hashlib.sha256(expected_payload.encode("utf-8")).hexdigest()
+    # Re-calculate chained hash and verify integrity
+    computed_hash = AuditLogger.compute_hash(
+        record_id=entry.id,
+        incident_id=entry.incident_id,
+        action_id=entry.action_id,
+        agent=entry.agent,
+        event_type=entry.event_type,
+        details_str=entry.details_json,
+        timestamp_iso=entry.timestamp.isoformat(),
+        previous_checksum=entry.previous_checksum
+    )
     assert entry.checksum == computed_hash
+
+    # Verify complete chain integrity
+    is_valid, err, count = AuditLogger.verify_chain_integrity(sim_db)
+    assert is_valid is True
 
 def test_stateful_executor_and_rollback_credit(sim_db):
     # Customer baseline

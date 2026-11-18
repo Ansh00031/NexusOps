@@ -1,8 +1,10 @@
 from __future__ import annotations
 import json
 from datetime import datetime
-from sqlalchemy import create_engine, Column, String, Integer, Float, Boolean, DateTime, Text
+from sqlalchemy import create_engine, Column, String, Integer, Float, Boolean, DateTime, Text, event
 from sqlalchemy.orm import declarative_base, sessionmaker
+
+Base = declarative_base()
 from backend.app.config import settings
 
 Base = declarative_base()
@@ -55,6 +57,7 @@ class AuditLogRecord(Base):
     agent = Column(String(64), nullable=False)
     event_type = Column(String(64), nullable=False)
     details_json = Column(Text, nullable=False)
+    previous_checksum = Column(String(128), nullable=True)
     checksum = Column(String(128), nullable=False)
     timestamp = Column(DateTime, default=datetime.utcnow)
 
@@ -120,6 +123,20 @@ engine = create_engine(
     connect_args={"check_same_thread": False} if "sqlite" in settings.database_url else {},
     echo=False
 )
+
+# Apply performance and integrity pragmas for SQLite
+@event.listens_for(engine, "connect")
+def set_sqlite_pragma(dbapi_connection, connection_record):
+    if "sqlite" in settings.database_url:
+        try:
+            cursor = dbapi_connection.cursor()
+            cursor.execute("PRAGMA journal_mode = WAL")
+            cursor.execute("PRAGMA synchronous = NORMAL")
+            cursor.execute("PRAGMA foreign_keys = ON")
+            cursor.close()
+        except Exception:
+            pass
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 def get_db():

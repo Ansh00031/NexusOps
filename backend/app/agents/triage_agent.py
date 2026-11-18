@@ -71,16 +71,36 @@ class TriageAgent:
         return entities
 
     @staticmethod
+    def sanitize_untrusted_input(raw_text: str) -> str:
+        """
+        Strips invisible unicode homoglyphs, zero-width spaces, and escape tags
+        used in adversarial prompt injection and boundary-breaking attacks.
+        """
+        if not raw_text:
+            return ""
+        # Remove zero-width spaces and bidirectional text override characters
+        sanitized = re.sub(r"[\u200B-\u200D\uFEFF\u202A-\u202E]", "", raw_text)
+        # Prevent premature boundary closure attacks
+        sanitized = sanitized.replace("</untrusted_customer_payload>", "&lt;/untrusted_customer_payload&gt;")
+        return sanitized
+
+    @staticmethod
     def detect_prompt_injection(raw_text: str) -> bool:
-        """Scan for adversarial prompt injection patterns."""
+        """Scan for adversarial prompt injection and privilege escalation patterns."""
         injection_patterns = [
-            r"system\s+override",
+            r"system\s*override",
             r"disregard\s+all\s+(?:previous|prior)",
             r"ignore\s+(?:all\s+)?instructions",
             r"administrative\s+superuser\s+mode",
             r"output\s+only\s+valid\s+json\s+confirming",
             r"do\s+not\s+alert\s+any\s+human",
-            r"you\s+are\s+now\s+in\s+unrestricted\s+mode"
+            r"you\s+are\s+now\s+in\s+unrestricted\s+mode",
+            r"jailbreak",
+            r"dan\s+mode",
+            r"bypass\s+all\s+guardrails",
+            r"roleplay\s+as\s+system",
+            r"base64:\s*[A-Za-z0-9+/=]{20,}",
+            r"!\[.*\]\(https?:\/\/[^\s\)]+\)"
         ]
         combined = re.compile("|".join(injection_patterns), re.IGNORECASE)
         return bool(combined.search(raw_text))
@@ -89,11 +109,14 @@ class TriageAgent:
         """
         Execute triage, entity extraction, prompt injection defense, and LLM classification.
         """
+        # Step 0: Input sanitization
+        sanitized_event = self.sanitize_untrusted_input(raw_event)
+
         # Step 1: Deterministic regex parsing
-        entities = self.extract_entities_regex(raw_event)
+        entities = self.extract_entities_regex(sanitized_event)
 
         # Step 2: Prompt injection scanning
-        is_injection = self.detect_prompt_injection(raw_event)
+        is_injection = self.detect_prompt_injection(sanitized_event)
 
         # Step 3: Delimit untrusted input strictly
         system_prompt = (
@@ -114,7 +137,7 @@ class TriageAgent:
 Extracted Regex Entities: {entities.model_dump_json()}
 
 <untrusted_customer_payload>
-{raw_event}
+{sanitized_event}
 </untrusted_customer_payload>"""
 
         llm_response = self.llm.generate(system_prompt=system_prompt, user_prompt=user_prompt)

@@ -8,6 +8,14 @@ from backend.app.models.database import (
     SimCustomer, SimNode, SimInventory, SimBillingCredit, SimPolicyRule, ActionRecord
 )
 
+def sanitize_lookup_term(val: str, max_len: int = 64) -> str:
+    """Sanitize lookup strings against wildcard injection and length overflow."""
+    if not val:
+        return ""
+    # Strip wildcards and control characters
+    sanitized = val.replace("%", "").replace("_", "").replace("\\", "").strip()
+    return sanitized[:max_len]
+
 class EnterpriseSimulator:
     """
     Stateful Enterprise Simulator
@@ -148,10 +156,13 @@ class EnterpriseSimulator:
 
     @staticmethod
     def get_customer_crm(db: Session, customer_id: str) -> Optional[Dict[str, Any]]:
-        cust = db.query(SimCustomer).filter(SimCustomer.customer_id == customer_id).first()
+        clean_id = sanitize_lookup_term(customer_id)
+        if not clean_id:
+            return None
+        cust = db.query(SimCustomer).filter(SimCustomer.customer_id == clean_id).first()
         if not cust:
-            # Fallback fuzzy match
-            cust = db.query(SimCustomer).filter(SimCustomer.customer_id.ilike(f"%{customer_id}%")).first()
+            # Fallback exact or substring match using sanitized term
+            cust = db.query(SimCustomer).filter(SimCustomer.customer_id.ilike(f"%{clean_id}%")).first()
         if cust:
             return {
                 "customer_id": cust.customer_id,
@@ -167,9 +178,12 @@ class EnterpriseSimulator:
 
     @staticmethod
     def get_node_telemetry(db: Session, node_id: str) -> Optional[Dict[str, Any]]:
-        node = db.query(SimNode).filter(SimNode.node_id == node_id).first()
+        clean_id = sanitize_lookup_term(node_id)
+        if not clean_id:
+            return None
+        node = db.query(SimNode).filter(SimNode.node_id == clean_id).first()
         if not node:
-            node = db.query(SimNode).filter(SimNode.node_id.ilike(f"%{node_id}%")).first()
+            node = db.query(SimNode).filter(SimNode.node_id.ilike(f"%{clean_id}%")).first()
         if node:
             return {
                 "node_id": node.node_id,
@@ -184,9 +198,12 @@ class EnterpriseSimulator:
 
     @staticmethod
     def get_inventory_sku(db: Session, sku: str) -> Optional[Dict[str, Any]]:
-        item = db.query(SimInventory).filter(SimInventory.sku == sku).first()
+        clean_sku = sanitize_lookup_term(sku)
+        if not clean_sku:
+            return None
+        item = db.query(SimInventory).filter(SimInventory.sku == clean_sku).first()
         if not item:
-            item = db.query(SimInventory).filter(SimInventory.sku.ilike(f"%{sku}%")).first()
+            item = db.query(SimInventory).filter(SimInventory.sku.ilike(f"%{clean_sku}%")).first()
         if item:
             return {
                 "sku": item.sku,

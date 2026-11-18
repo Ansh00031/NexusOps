@@ -19,6 +19,7 @@ from datetime import datetime
 from backend.app.config import settings
 from backend.app.models.database import init_db, SessionLocal, SimCustomer, SimNode, SimInventory, SimBillingCredit, AuditLogRecord, IncidentRecord, ActionRecord
 from backend.app.services.enterprise_simulator import EnterpriseSimulator
+from backend.app.services.audit_logger import AuditLogger
 from backend.app.agents.orchestrator import NexusOrchestrator
 from backend.app.models.schemas import IncidentCreate, ActionRiskLevel, SLAPriority, Department
 from simulator.scenarios import SCENARIOS, get_scenario_by_id
@@ -133,8 +134,13 @@ with st.sidebar:
         creds = db.query(SimBillingCredit).order_by(SimBillingCredit.created_at.desc()).limit(10).all()
         st.dataframe([{"Credit ID": cr.credit_id, "Customer": cr.customer_id, "Amount ($)": cr.amount, "Status": cr.status} for cr in creds], hide_index=True)
     else:
+        is_valid, err, count = AuditLogger.verify_chain_integrity(db)
+        if is_valid:
+            st.success(f"🛡️ **SHA-256 Chain:** TAMPER-FREE ({count} verified)")
+        else:
+            st.error(f"⚠️ **Integrity Error:** {err}")
         audits = db.query(AuditLogRecord).order_by(AuditLogRecord.timestamp.desc()).limit(8).all()
-        st.dataframe([{"Agent": a.agent, "Event": a.event_type, "Action": a.action_id or "-", "Hash": a.checksum[:12]} for a in audits], hide_index=True)
+        st.dataframe([{"Agent": a.agent, "Event": a.event_type, "Action": a.action_id or "-", "Hash": a.checksum[:10] + "...", "Prev": (a.previous_checksum[:8] + "...") if a.previous_checksum else "GENESIS"} for a in audits], hide_index=True)
 
 # Top Metrics Ribbon
 all_incidents = db.query(IncidentRecord).all()

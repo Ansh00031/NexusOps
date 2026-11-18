@@ -10,6 +10,19 @@ from simulator.scenarios import SCENARIOS
 
 router = APIRouter(prefix="/api/simulator", tags=["simulator"])
 
+from backend.app.services.audit_logger import AuditLogger
+
+@router.get("/audit/verify")
+def verify_audit_log(db: Session = Depends(get_db)):
+    """Validate the cryptographic SHA-256 hash chain of the immutable audit log."""
+    is_valid, error, count = AuditLogger.verify_chain_integrity(db)
+    return {
+        "tamper_free": is_valid,
+        "records_verified": count,
+        "error": error,
+        "status": "VALID" if is_valid else "TAMPERED"
+    }
+
 @router.get("/scenarios")
 def list_scenarios():
     return SCENARIOS

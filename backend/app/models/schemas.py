@@ -103,10 +103,10 @@ class ReasoningStep(BaseModel):
     details: Dict[str, Any] = Field(default_factory=dict)
 
 class IncidentCreate(BaseModel):
-    title: str
-    raw_event: str
-    channel: str = "email"  # email, slack, webhook, ticket
-    scenario_id: Optional[str] = None
+    title: str = Field(default="", max_length=256, description="Short descriptive title of the operational incident")
+    raw_event: str = Field(default="", max_length=50000, description="Raw inbound payload text")
+    channel: str = Field(default="email", max_length=64, description="Inbound communication channel")
+    scenario_id: Optional[str] = Field(default=None, max_length=64)
 
 class Incident(BaseModel):
     id: str
@@ -124,7 +124,7 @@ class Incident(BaseModel):
     financial_impact: float = 0.0
 
 class ApprovalRequest(BaseModel):
-    comment: Optional[str] = None
+    comment: Optional[str] = Field(default=None, max_length=1000, description="Manager review rationale")
 
 class AuditLogEntry(BaseModel):
     id: str
